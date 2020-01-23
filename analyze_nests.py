@@ -337,6 +337,36 @@ def create_config(config_path):
     config['json-fill-opacity'] = config_raw.getfloat(
         'Geojson',
         'FILL-OPACITY')
+    config['wh-enabled'] = config_raw.getboolean(
+        'Webhook',
+        'ENABLED')
+    config['wh-language'] = config_raw.get(
+        'Webhook',
+        'LANGUAGE')
+    config['wh-min-spawns-for-post'] = config_raw.getfloat(
+        'Webhook',
+        'MIN_SPAWNS_FOR_POST')
+    config['wh-title'] = config_raw.get(
+        'Webhook',
+        'TITLE')
+    config['wh-text'] = config_raw.get(
+        'Webhook',
+        'TEXT')
+    config['wh-sort-by'] = config_raw.get(
+        'Webhook',
+        'SORT_BY')
+    config['wh-sort-reverse'] = config_raw.getboolean(
+        'Webhook',
+        'SORT_REVERSE')
+    config['wh-ignore-unnamed'] = config_raw.getboolean(
+        'Webhook',
+        'IGNORE_UNNAMED')
+    config['wh-locale-file'] = config_raw.get(
+        'Webhook',
+        'LOCALE_FILE')
+    config['wh-map-link'] = config_raw.get(
+        'Webhook',
+        'MAP_LINK')
     config['dc-enabled'] = config_raw.getboolean(
         'Discord',
         'ENABLED')
@@ -346,33 +376,12 @@ def create_config(config_path):
     config['dc-username'] = config_raw.get(
         'Discord',
         'USERNAME')
-    config['dc-language'] = config_raw.get(
-        'Discord',
-        'LANGUAGE')
-    config['dc-min-spawns-for-post'] = config_raw.getfloat(
-        'Discord',
-        'MIN_SPAWNS_FOR_POST')
-    config['dc-title'] = config_raw.get(
-        'Discord',
-        'TITLE')
-    config['dc-text'] = config_raw.get(
-        'Discord',
-        'TEXT')
-    config['dc-sort-by'] = config_raw.get(
-        'Discord',
-        'SORT_BY')
-    config['dc-sort-reverse'] = config_raw.getboolean(
-        'Discord',
-        'SORT_REVERSE')
-    config['dc-ignore-unnamed'] = config_raw.getboolean(
-        'Discord',
-        'IGNORE_UNNAMED')
-    config['dc-locale-file'] = config_raw.get(
-        'Discord',
-        'LOCALE_FILE')
-    config['dc-map-link'] = config_raw.get(
-        'Discord',
-        'MAP_LINK')
+    config['tg-token'] = config_raw.get(
+        'Telegram',
+        'TOKEN')
+    config['tg-chat_id'] = config_raw.get(
+        'Telegram',
+        'CHAT_IDS')
     config['encoding'] = config_raw.get(
         'Other',
         'ENCODING')
@@ -610,7 +619,7 @@ def analyze_nest_data(config):
 
     with open(POKE_NAMES_FILE) as pk_names_file:
         poke_names = json.load(pk_names_file)
-    with open(config['dc-locale-file']) as loc_file:
+    with open(config['wh-locale-file']) as loc_file:
         locale = json.load(loc_file)
     areas = dict()
     areas_basic = dict()
@@ -909,7 +918,7 @@ def analyze_nest_data(config):
 
         mycursor_w.execute(insert_query, insert_args)
         all_areas.append(area)
-        insert_args["pokemon_name"] = poke_names[str(poke_id)][config["dc-language"]]
+        insert_args["pokemon_name"] = poke_names[str(poke_id)][config["wh-language"]]
         insert_args["pokemon_type"] = poke_names[str(poke_id)]["type"]
         insert_args["pokemon_shiny"] = poke_names[str(poke_id)]["shiny"]
         areas_basic[str(area['id'])] = insert_args
@@ -935,20 +944,20 @@ def analyze_nest_data(config):
         # Sort basic areas
         sorted_basic_areas = OrderedDict(sorted(
             areas_basic.items(),
-            key=lambda kv: kv[1][config["dc-sort-by"]],
-            reverse=config["dc-sort-reverse"]))
+            key=lambda kv: kv[1][config["wh-sort-by"]],
+            reverse=config["wh-sort-reverse"]))
         content = defaultdict(str)
         content_page = 0
         for b_area in sorted_basic_areas.values():
-            if config['dc-ignore-unnamed'] and (b_area["name"] == config["default_park_name"]):
+            if config['wh-ignore-unnamed'] and (b_area["name"] == config["default_park_name"]):
                 continue
-            if float(b_area["pokemon_avg"]) < config["dc-min-spawns-for-post"]:
+            if float(b_area["pokemon_avg"]) < config["wh-min-spawns-for-post"]:
                 continue
             nest_time = datetime.utcfromtimestamp(
                 int(b_area["current_time"])).strftime('%Y-%m-%d %H:%M:%S')
             park_name = b_area["name"]
 
-            g_map_ref = '<https://maps.google.com/maps?q={lon:.5f},{lat:.5f}>'.format(
+            g_map_ref = 'https://maps.google.com/maps?q={lon:.5f},{lat:.5f}'.format(
                 lat=b_area["lat"],
                 lon=b_area["lon"]
                 )
@@ -957,8 +966,8 @@ def analyze_nest_data(config):
                 name=park_name,
                 map_ref=g_map_ref)
 
-            custom_map_link = '<{map_link}>'.format(
-                map_link=config["dc-map-link"])
+            custom_map_link = '{map_link}'.format(
+                map_link=config["wh-map-link"])
             custom_map_ref = custom_map_link.format(
                 lat=b_area["lat"],
                 lon=b_area["lon"])
@@ -974,7 +983,7 @@ def analyze_nest_data(config):
             poke_type_emojis = list()
             for typ in b_area["pokemon_type"]:
                 poke_type_emojis.append(locale["poke-type-emoji"][typ])
-            text = (config["dc-text"] + u"\n").format(
+            text = (config["wh-text"] + u"\n").format(
                 park_name=park_name,
                 park_name_g=park_name_g,
                 park_name_m=park_name_m,
@@ -995,7 +1004,8 @@ def analyze_nest_data(config):
                 content[content_page] += text
 
         def send_webhook(payload):
-            """ Send payload to webhook. """
+            """ Send payload to Discord/Telegram. """            
+            # Discord
             webhooks = json.loads(config["dc-webhook"])
             if not isinstance(webhooks, list):
                 webhooks = [webhooks]
@@ -1009,9 +1019,19 @@ def analyze_nest_data(config):
                     print("Error while sending Webhook")
                     print(result.text)
                 time.sleep(DISCORD_RATE_LIMIT)
+            # Telegram
+            chat_ids = json.loads(config["tg-chat_ids"])
+            if not isinstance(chat_ids, list):
+                chat_ids = [chat_ids]
+            for webhook in webhooks:
+                tg_payload = payload['content']
+                result = requests.get('https://api.telegram.org/bot' + config["tg-token"] + '/sendMessage?chat_id=' + config["tg-chat_id"] + '&parse_mode=markdown&disable_web_page_preview=true&text=' + tg_payload)
+                if result.status_code > 200:
+                    print("Error while sending Webhook")
+                    print(result.text)
 
         # Send Title of Nest Data:
-        nest_title = config["dc-title"].format(
+        nest_title = config["wh-title"].format(
             area_name=config["area_name"]
         ) + "\n"
         nest_title += ("-"*len(nest_title))
@@ -1020,6 +1040,7 @@ def analyze_nest_data(config):
             "content": nest_title
             }
         send_webhook(payload)
+        send_telegram_webhook(payload)
 
         # Send Nest Data
         for cont in content.values():
@@ -1027,11 +1048,16 @@ def analyze_nest_data(config):
                 "username": config["dc-username"],
                 "content": cont
             }
+            print("Nest Data:")
             send_webhook(payload)
+            send_telegram_webhook(payload)
 
 
     if config["dc-enabled"]:
         discord_webhook()
+        
+    if config["tg-enabled"]:
+        telegram_webhook()
 
     if config['geojson_extend']:
         with open(config['save_path'], 'r') as old_file_:

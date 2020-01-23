@@ -53,10 +53,8 @@ STROKE-OPACITY = 1
 FILL =  #0651FF
 FILL-OPACITY = 0.5
 
-[Discord]
+[Webhook]
 ENABLED = False
-WEBHOOK = ["https://discordapp.com/api/webhooks/xxxxx/xxxxxx"]
-USERNAME = Nest-Bot
 LANGUAGE = en
 MIN_SPAWNS_FOR_POST = 3
 SORT_BY = pokemon_name
@@ -66,6 +64,16 @@ TITLE = **This is the Nest report for {area_name}**
 TEXT = **{park_name_g}**: {poke_name} {poke_shiny}({poke_type_emoji}) => {poke_avg} per hour
 LOCALE_FILE = locale.json
 MAP_LINK = https://my-map-domain.de/?lat={lon:.5f}&lon={lat:.5f}&zoom=16
+
+[Discord]
+ENABLED = False
+WEBHOOK = ["https://discordapp.com/api/webhooks/xxxxx/xxxxxx"]
+USERNAME = Nest-Bot
+
+[Telegram]
+ENABLED = False
+TOKEN = 1234567:abcdefghijklmnopqrstuvxyz
+CHAT_IDS = ["1234567"]
 
 [Other]
 ENCODING = utf-8
